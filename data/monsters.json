@@ -1,0 +1,217 @@
+[
+  {
+    "id": "m_1",
+    "name": "Альфа",
+    "icon": "https://operator.cdn.gmru.net/ms/82f6c7cdd12a516698ac8a96bf288156.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [
+      {"x": 162, "y": 427, "el": 12}
+    ],
+    "desc1": "Фронтальное физическое аое.",
+    "desc2": "[[Следовать*res:795]]"
+  },
+  {
+    "id": "m_2",
+    "name": "Аптийский щит",
+    "icon": "https://operator.cdn.gmru.net/ms/05aba92766d4589e70a177e5823373bc.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [
+      {"x": 151, "y": 339, "el": 0}
+    ],
+    "desc1": "МанаДот.С 50% стан + драконы.",
+    "desc2": ""
+  }
+  ,
+  {
+    "id": "m_3",
+    "name": "Смотритель бездны",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 288, "y": 963, "el": 0} ],
+    "desc1": "",
+    "desc2": ""
+  },
+  {
+    "id": "m_4",
+    "name": "Дух селения",
+    "icon": "https://operator.cdn.gmru.net/ms/32870ea5e726d4316fed003508b5c81b.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 159, "y": 975, "el": 0} ],
+    "desc1": "Аое стан, с 50% кидает топоры уменьшающие физ. дэф. и маг. дэф.",
+    "desc2": ""
+  },
+  {
+    "id": "m_5",
+    "name": "Энгерранд",
+    "icon": "https://operator.cdn.gmru.net/ms/262bc38a1c3656aff06640dc7448fcb6.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 235, "y": 867, "el": 0} ],
+    "desc1": "Сферо-видное аое + дебафф на воду.",
+    "desc2": ""
+  },
+  {
+    "id": "m_6",
+    "name": "Крылатый воин",
+    "icon": "https://operator.cdn.gmru.net/ms/fcc38eb10e7ce92369fc60f76dc9282b.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 439, "y": 752, "el": 0} ],
+    "desc1": "МанаДот, рандомный агр с фронтальным физ. аое.",
+    "desc2": ""
+  },
+  {
+    "id": "m_7",
+    "name": "Призрачный наездник",
+    "icon": "https://operator.cdn.gmru.net/ms/95c7b80cb97b0cc3a7277648f7436527.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 171, "y": 787, "el": 0} ],
+    "desc1": "Кидает драконы.",
+    "desc2": ""
+  },
+  {
+    "id": "m_8",
+    "name": "Обеан",
+    "icon": "https://operator.cdn.gmru.net/ms/fcc272b452afbbb92478a402b8298fff.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 553, "y": 437, "el": 0} ],
+    "desc1": "Аое удары начиная с 50% хп боса.",
+    "desc2": ""
+  },
+  {
+    "id": "m_9",
+    "name": "Охотник за душами",
+    "icon": "https://operator.cdn.gmru.net/ms/6ef8203c51800700c47c8def8d71bca8.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 657, "y": 434, "el": 0} ],
+    "desc1": "Кидает раскол. Аое дебафф на уменьшение времени каста. Аое дебафф на уменьшение скорости атаки.",
+    "desc2": ""
+  },
+  {
+    "id": "m_10",
+    "name": "Сабля демона",
+    "icon": "https://operator.cdn.gmru.net/ms/7b31d183de58455df4d8ff402018b1d0.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 438, "y": 471, "el": 0} ],
+    "desc1": "Рутает, кидает драконы, несогласие, манаДот. После 70% кидает кровоток + дебафф на уменьшение времени каста.",
+    "desc2": ""
+  },
+  {
+    "id": "m_11",
+    "name": "Шилонос",
+    "icon": "https://operator.cdn.gmru.net/ms/8f3c4f9e80ed6e167fa825df3ccfe441.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 251, "y": 754, "el": 0} ],
+    "desc1": "Вешает дот металлом, рандомный агр. С 50% кидает манаДот.",
+    "desc2": ""
+  },
+  {
+    "id": "m_12",
+    "name": "Сколопендра-убийца",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 638, "y": 867, "el": 0} ],
+    "desc1": "Дебафы, атака: фронтальное АОЕ, выжигание маны, дебаф на уменьшение точности и уменьшение скорости атаки",
+    "desc2": ""
+  },
+  {
+    "id": "m_13",
+    "name": "Стальной меч демона",
+    "icon": "https://operator.cdn.gmru.net/ms/1cd3643cfc7c54985717a5a3acf235a6.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 487, "y": 570, "el": 0} ],
+    "desc1": "Сжигает ци.",
+    "desc2": ""
+  },
+  {
+    "id": "m_14",
+    "name": "Тень умершего",
+    "icon": "https://operator.cdn.gmru.net/ms/5f9377bf1719ab63c381446a40178781.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 659, "y": 523, "el": 0} ],
+    "desc1": "Дебафф на уменьшение скорости атаки.",
+    "desc2": ""
+  },
+  {
+    "id": "m_15",
+    "name": "Загадка",
+    "icon": "https://operator.cdn.gmru.net/ms/a9fcfe0956d42b3ceeecb8255a5df1d6.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 314, "y": 955, "el": 0} ],
+    "desc1": "Маг аое, дебафф на воду, несогласие.",
+    "desc2": ""
+  },
+  {
+    "id": "m_16",
+    "name": "Златой король",
+    "icon": "https://operator.cdn.gmru.net/ms/116abd5aeab6a2c78540e44107bf3e73.jpg",
+    "tier": "MONSTER",
+    "group": "Мировые боссы",
+    "coords": [ {"x": 652, "y": 389, "el": 0} ],
+    "desc1": "Масс стан на 4 сек.",
+    "desc2": ""
+  },
+  {
+    "id": "m_17",
+    "name": "Василиск",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Клановые боссы",
+    "coords": [],
+    "desc1": "Рандомная точка (появляется в случайном месте).",
+    "desc2": ""
+  },
+  {
+    "id": "m_18",
+    "name": "Деревня соблазна",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Клановые боссы",
+    "coords": [ {"x": 229, "y": 752, "el": 0} ],
+    "desc1": "",
+    "desc2": ""
+  },
+  {
+    "id": "m_19",
+    "name": "Черные Горы",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Клановые боссы",
+    "coords": [ {"x": 407, "y": 344, "el": 0} ],
+    "desc1": "",
+    "desc2": ""
+  },
+  {
+    "id": "m_20",
+    "name": "Персиковый док",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Клановые боссы",
+    "coords": [ {"x": 656, "y": 505, "el": 0} ],
+    "desc1": "",
+    "desc2": ""
+  },
+  {
+    "id": "m_21",
+    "name": "Озеро Перьев",
+    "icon": "https://www.pwdatabase.com/images/icons/generalm/0.png",
+    "tier": "MONSTER",
+    "group": "Клановые боссы",
+    "coords": [ {"x": 356, "y": 383, "el": 33} ],
+    "desc1": "",
+    "desc2": ""
+  }
+]

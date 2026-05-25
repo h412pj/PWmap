@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<title>PW map 1.4.6</title>
+<link rel="icon" href="https://comeback.pw/templates/db/img/menu/icon_res.png" type="image/png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<link rel="stylesheet" href="css/pwmap.css">
+</head>
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <h3>Интерактивная карта</h3>
+        <div class="desc">Клик — центрировать и показать координаты.</div>
+        <div id="datasetTabs" style="display:flex;gap:8px;margin:6px 0">
+            <button data-ds="resources" class="ds-btn" style="padding:6px 10px;border-radius:6px;background:#172025;color:#cfe7d6;border:0">Ресурсы</button>
+            <button data-ds="monsters" class="ds-btn" style="padding:6px 10px;border-radius:6px;background:transparent;color:#9aa0a6;border:1px solid rgba(255,255,255,.03)">Монстры</button>
+        </div>
+        <div id="tierTabs" style="display:flex;gap:8px;margin:10px 0 12px 0">
+            <button data-tier="T1" class="tier-btn" style="padding:6px 10px;border-radius:6px;background:transparent;color:#9aa0a6;border:1px solid rgba(255,255,255,.03)">T1</button>
+            <button data-tier="T2" class="tier-btn" style="padding:6px 10px;border-radius:6px;background:transparent;color:#9aa0a6;border:1px solid rgba(255,255,255,.03)">T2</button>
+            <button data-tier="T3" class="tier-btn" style="padding:6px 10px;border-radius:6px;background:transparent;color:#9aa0a6;border:1px solid rgba(255,255,255,.03)">T3</button>
+            <button data-tier="T4" class="tier-btn" style="padding:6px 10px;border-radius:6px;background:transparent;color:#9aa0a6;border:1px solid rgba(255,255,255,.03)">T4</button>
+        </div>
+        <div class="controls">
+            <input id="search" type="search" placeholder="Поиск">
+            <button id="reset" title="Показать все" style="background:transparent;border:1px solid rgba(255,255,255,.05);color:#9aa0a6;padding:6px 8px;border-radius:6px">Сброс</button>
+        </div>
+        <div id="resourceList" class="resource-list"></div>
+        <div class="sidebar-footer" style="padding-top:8px;border-top:1px solid rgba(255,255,255,.03);margin-top:10px;font-size:12px;color:#9aa0a6;text-align:center;margin-bottom:6px">
+            <div style="display:inline-flex;gap:6px;align-items:center;justify-content:center;padding-top:6px">
+                <span>by</span>
+                <a id="authorLink" href="https://t.me/murasame_dev" target="_blank" style="color:#cfe7d6;text-decoration:none;font-weight:600;display:inline-block">ImurasameI</a>
+            </div>
+        </div>
+    </aside>
+    <div id="map">
+        <button id="mapToggle" title="Переключить карту" style="position:absolute;top:10px;left:50px;z-index:1000;background:rgba(255,255,255,0.9);color:#333;padding:4px 6px;border-radius:4px;font-size:11px;cursor:pointer;width:30px;height:30px;display:flex;align-items:center;justify-content:center;font-weight:bold">3D</button>
+    </div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const TILE_SIZE = 256;
+let SCALE_X, SCALE_Z, GAME_X_OFFSET, GAME_Y_OFFSET;
+
+const COLS = 8;
+const ROWS = 11;
+const MAP_CONFIGS = {
+    default: {
+        path: 'tiles',
+        ext: 'webp',
+        name: 'Основная карта'
+    },
+    alternative: {
+        path: 'tiles_3d',
+        ext: 'webp',
+        name: '3D карта'
+    }
+};
+
+let currentMapType = 'default';
+const TILES_PATH = () => MAP_CONFIGS[currentMapType].path;
+const TILES_EXT = () => MAP_CONFIGS[currentMapType].ext;
+const START_INDEX = 0;
+const tileRanges = { 0: { x: [0, COLS - 1], y: [0, ROWS - 1] } };
+const TRANSPARENT_PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGMAAQAABQABDQottAAAAABJRU5ErkJggg==';
+const MAP_WIDTH = COLS * TILE_SIZE;
+const MAP_HEIGHT = ROWS * TILE_SIZE;
+const GAME_MAX_WIDTH = 920;
+const GAME_MAX_HEIGHT = 614;
+const MAP_MARGIN_X = 1000;
+const MAP_MARGIN_Y = 1000;
+const MAP_EFFECTIVE_WIDTH = MAP_WIDTH - (MAP_MARGIN_X * 2);
+const MAP_EFFECTIVE_HEIGHT = MAP_HEIGHT - (MAP_MARGIN_Y * 2);
+(() => {
+    const ax_px = 1022, ay_px = 1022, agx = 93, agy = 1010;
+    const bx_px = 5625, by_px = 4600, bgx = 552, bgy = 653;
+    const a_db = MAP_HEIGHT - ay_px;
+    const b_db = MAP_HEIGHT - by_px;
+    const a_ex = ax_px - MAP_MARGIN_X;
+    const b_ex = bx_px - MAP_MARGIN_X;
+    const a_ey = a_db - MAP_MARGIN_Y;
+    const b_ey = b_db - MAP_MARGIN_Y;
+    SCALE_X = (bgx - agx) / (b_ex - a_ex);
+    SCALE_Z = (bgy - agy) / (b_ey - a_ey);
+    const rawA_x = Math.round(a_ex * SCALE_X);
+    const rawA_z = Math.round(a_ey * SCALE_Z);
+    GAME_X_OFFSET = Math.round(agx - rawA_x);
+    GAME_Y_OFFSET = Math.round(agy - rawA_z);
+})();
+const BASE_TILE_Z = 0;
+const ZOOM_MIN = 0;
+const ZOOM_MAX = 3;
+const pwMapCRS = L.extend({}, L.CRS.Simple, {
+    scale: function(zoom){ return Math.pow(2, zoom - BASE_TILE_Z); },
+    transformation: new L.Transformation(1, 0, -1, MAP_HEIGHT)
+});
+
+const map = L.map('map', {
+    crs: pwMapCRS,
+    minZoom: BASE_TILE_Z,
+    maxZoom: BASE_TILE_Z + ZOOM_MAX,
+    zoom: BASE_TILE_Z,
+    center: [MAP_HEIGHT/2, MAP_WIDTH/2],
+    scrollWheelZoom: true,
+    wheelDebounceTime: 20,
+    wheelPxPerZoomLevel: 80,
+    inertia: false,
+    inertiaDeceleration: 3000,
+    inertiaMaxSpeed: 1500,
+    worldCopyJump: false,
+    maxBoundsViscosity: 1.0,
+    dragging: true,
+    zoomSnap: 1,
+    zoomDelta: 1
+});
+
+const CustomLayer = L.TileLayer.extend({
+    options: {
+        tileSize: TILE_SIZE,
+        noWrap: true,
+        minNativeZoom: BASE_TILE_Z,
+        maxNativeZoom: BASE_TILE_Z,
+        keepBuffer: 2
+    },
+    getTileUrl: function(coords){
+        const reqZ = coords.z, reqX = coords.x, reqY = coords.y;
+        const range = tileRanges[0]; if(!range) return TRANSPARENT_PNG;
+        
+        const scale = 1;
+        const baseX = reqX;
+        const baseY = reqY;
+        if(baseX < range.x[0] || baseX > range.x[1] || baseY < range.y[0] || baseY > range.y[1]) return TRANSPARENT_PNG;
+        
+        const idx = (baseY * 10) + baseX + START_INDEX;
+        const pad = String(idx).padStart(3, '0');
+        const url = `${TILES_PATH()}/${pad}.${TILES_EXT()}`;
+        
+        return url;
+    },
+    tileSize: TILE_SIZE,
+    noWrap: true
+});
+const layer = new CustomLayer(); layer.addTo(map);
+
+function parseDescLinks(s){
+    if(typeof s !== 'string') return '';
+    return s.replace(/\[\[(.*?)\*(.*?)\]\]/g, (m, label, spec)=>{
+        const safeLabel = String(label||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const safeSpec = String(spec||'').replace(/"/g,'&quot;');
+        const isHttp = /^https?:/i.test(safeSpec);
+        if(isHttp){
+            return `<a href="${safeSpec}" target="_blank" rel="noopener noreferrer" class="desc-link" data-spec="${safeSpec}">${safeLabel}</a>`;
+        }
+        return `<a href="#" class="desc-link" data-spec="${safeSpec}">${safeLabel}</a>`;
+    });
+}
+
+(function(){
+    try{
+        const style = document.createElement('style');
+        style.type = 'text/css';
+        const css = `
+            .leaflet-tile-container { 
+                pointer-events: none;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+            }
+            .leaflet-tile { 
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges; 
+                image-rendering: pixelated; 
+                display: block;
+                width: ${TILE_SIZE}px !important;
+                height: ${TILE_SIZE}px !important;
+                border: none !important;
+                outline: none !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                position: absolute !important;
+                /* Eliminate sub-pixel gaps - CRITICAL */
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+                transform: translateZ(0);
+                -webkit-transform: translateZ(0);
+                /* Prevent anti-aliasing artifacts */
+                -webkit-font-smoothing: subpixel-antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                /* Force pixel boundaries */
+                will-change: auto;
+                transform-origin: 0 0;
+            }
+            .leaflet-tile-loaded { 
+                -webkit-backface-visibility: hidden; 
+                backface-visibility: hidden;
+            }
+            /* Ensure tile pane has no gaps */
+            .leaflet-tile-pane {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+                image-rendering: pixelated;
+                transform-origin: 0 0 !important;
+                backface-visibility: hidden;
+                -webkit-backface-visibility: hidden;
+            }
+        `;
+        style.appendChild(document.createTextNode(css));
+        document.head.appendChild(style);
+    }catch(e){ console.warn('tilePane styling failed', e); }
+})();
+
+const imageBounds = [[0,0],[MAP_HEIGHT, MAP_WIDTH]]; map.setMaxBounds(imageBounds);
+
+function clampMapCenter(){
+    try{
+        const c = map.getCenter();
+        const minLat = imageBounds[0][0];
+        const minLng = imageBounds[0][1];
+        const maxLat = imageBounds[1][0];
+        const maxLng = imageBounds[1][1];
+        let lat = c.lat;
+        let lng = c.lng;
+        let changed = false;
+        if(lat < minLat){ lat = minLat; changed = true; }
+        if(lat > maxLat){ lat = maxLat; changed = true; }
+        if(lng < minLng){ lng = minLng; changed = true; }
+        if(lng > maxLng){ lng = maxLng; changed = true; }
+        if(changed){
+            map.setView([lat, lng], map.getZoom(), { animate: false });
+        }
+    }catch(e){}
+}
+map.on('moveend', ()=>{ clampMapCenter(); });
+function applyResponsiveZoomLimits(){
+    map.setMinZoom(BASE_TILE_Z + ZOOM_MIN);
+    map.setMaxZoom(BASE_TILE_Z + ZOOM_MAX);
+    const z = map.getZoom();
+    const minZ = BASE_TILE_Z + ZOOM_MIN;
+    const maxZ = BASE_TILE_Z + ZOOM_MAX;
+    if(z < minZ) map.setZoom(minZ);
+    if(z > maxZ) map.setZoom(maxZ);
+}
+applyResponsiveZoomLimits();
+let resizeTimer = null; window.addEventListener('resize', ()=>{ clearTimeout(resizeTimer); resizeTimer = setTimeout(()=>{ applyResponsiveZoomLimits(); }, 150); });
+
+const CAL_AX = 2.5045716, CAL_BX = 22.6229343;
+const CAL_AY = -2.5037969, CAL_BY = 2784.5509214;
+function toImageXYFromGame(gx, gy){
+    return { imageX: CAL_AX * gx + CAL_BX, imageY: CAL_AY * gy + CAL_BY };
+}
+
+const datasetCache = {};
+async function ensureDatasetLoaded(name){
+    if(datasetCache[name]) return datasetCache[name];
+    const res = await fetch(`data/${name}.json`);
+    const data = await res.json();
+    datasetCache[name] = data;
+    return data;
+}
+function pulseAt(latlng){
+    try{
+        const pulse = L.circleMarker(latlng, { radius: 12, color: '#00e676', weight: 3, fillOpacity: 0, opacity: 0.9, interactive: false });
+        pulse.addTo(map);
+        setTimeout(()=>{ try{ pulse.setStyle({opacity:0.5}); }catch(e){} }, 250);
+        setTimeout(()=>{ try{ map.removeLayer(pulse); }catch(e){} }, 900);
+    }catch(e){ /* noop */ }
+}
+async function navigateToSpec(spec){
+    try{
+        if(!spec || typeof spec !== 'string') return;
+        const s = spec.trim();
+        if(/^https?:/i.test(s)){ window.open(s, '_blank'); return; }
+        const parts = s.split(':'); if(parts.length < 2) return;
+        const type = parts[0].toLowerCase();
+        const id = parts.slice(1).join(':').trim();
+        const ds = type === 'res' ? 'resources' : (type === 'npc' ? 'npc' : null);
+        if(!ds) return;
+        if(currentDatasetName !== ds){
+            try{
+                document.querySelectorAll('.ds-btn').forEach(b=> b.style.background='transparent');
+                const btn = document.querySelector(`.ds-btn[data-ds="${ds}"]`);
+                if(btn) btn.style.background = '#172025';
+            }catch(e){}
+            await loadDataset(ds);
+        }
+        if(currentDatasetName === ds && currentResourceGroups && currentResourceGroups[id]){
+            const entry = currentResourceGroups[id];
+            try{ if(entry.checkbox && !entry.checkbox.checked){ entry.checkbox.checked = true; entry.checkbox.dispatchEvent(new Event('change')); } }catch(e){}
+            if(entry.first){ map.setView(entry.first, BASE_TILE_Z); pulseAt(entry.first); return; }
+        }
+        const list = await ensureDatasetLoaded(ds);
+        const item = (list||[]).find(x => String(x.id) === String(id));
+        if(item && Array.isArray(item.coords) && item.coords.length){
+            if(ds === 'resources'){
+                const targetTier = (item.tier || '').toUpperCase();
+                if(targetTier && selectedTier !== targetTier){
+                    selectedTier = targetTier; highlightTierButtons(); renderResourcesList();
+                }
+            }
+            if(currentDatasetName === ds && currentResourceGroups && currentResourceGroups[id]){
+                const entry = currentResourceGroups[id];
+                try{ if(entry.checkbox && !entry.checkbox.checked){ entry.checkbox.checked = true; entry.checkbox.dispatchEvent(new Event('change')); } }catch(e){}
+                if(entry.first){ map.setView(entry.first, BASE_TILE_Z); pulseAt(entry.first); return; }
+            }
+            const c = item.coords[0];
+            const rawX = Number(c.x || 0);
+            const rawY = Number(c.y ?? c.z ?? 0);
+            const {imageX, imageY} = toImageXYFromGame(rawX, rawY);
+            const p = [MAP_HEIGHT - imageY, imageX];
+            map.setView(p, BASE_TILE_Z);
+            pulseAt(p);
+        }
+    }catch(err){}
+}
+
+let currentResourceGroups = {}; let currentResources = []; let currentDatasetName = 'resources';
+let selectedTier = 'T1';
+
+function highlightTierButtons(){
+    const tierBtns = document.querySelectorAll('.tier-btn');
+    tierBtns.forEach(b => {
+        const active = (b.dataset.tier || '').toUpperCase() === (selectedTier || '').toUpperCase();
+        b.style.background = active ? '#172025' : 'transparent';
+        b.style.color = active ? '#cfe7d6' : '#9aa0a6';
+    });
+}
+
+function clearResourceLayers(){
+    Object.values(currentResourceGroups).forEach(rg=>{ if(rg.group) map.removeLayer(rg.group); });
+    currentResourceGroups = {};
+}
+
+function renderResourcesList(){
+    const listEl = document.getElementById('resourceList');
+    if(!listEl) return;
+    
+    clearResourceLayers();
+    listEl.innerHTML = '';
+
+    const colors = ['#51b56a','#5aa9ff','#f6c85f','#ff6b6b','#c678ff','#7bd389'];
+
+    const wantedTier = (selectedTier || '').toUpperCase();
+    const filtered = currentResources.filter(r => (r && r.tier ? r.tier.toUpperCase() : '') === wantedTier);
+
+    filtered.forEach((r, idx)=>{
+        const color = colors[idx % colors.length];
+        const containerEl = document.createElement('div');
+        containerEl.className = 'resource-item';
+        const cb = document.createElement('input');
+        cb.type='checkbox';
+        cb.id = 'r_'+r.id;
+        const img = document.createElement('img');
+        img.src = r.icon || '';
+        const label = document.createElement('label');
+        label.htmlFor = cb.id;
+        label.innerText = r.name || r.id;
+        containerEl.appendChild(cb);
+        containerEl.appendChild(img);
+        containerEl.appendChild(label);
+        listEl.appendChild(containerEl);
+
+        const group = L.layerGroup();
+        let firstPointLatLng = null;
+        (r.coords||[]).forEach(c=>{
+            const rawX = Number(c.x || 0);
+            const rawY = Number(c.y ?? c.z ?? 0);
+            const {imageX, imageY} = toImageXYFromGame(rawX, rawY);
+            const p = [MAP_HEIGHT - imageY, imageX];
+            if(!firstPointLatLng) firstPointLatLng = p;
+            const m = L.circleMarker(p, {radius:8, color:color, fillColor:color, fillOpacity:0.9, stroke:true, weight:2, opacity:1});
+            const descHtml = `${(r.desc1||'')?`<div style=\"color:#9aa0a6\">${parseDescLinks(r.desc1)}</div>`:''}${(r.desc2||'')?`<div style=\"color:#9aa0a6\">${parseDescLinks(r.desc2)}</div>`:''}`;
+            const popupText = `<div style="display:flex;align-items:center;gap:8px;min-width:200px"><img src="${(r.icon||'').replace(/"/g,'&quot;')}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex:0 0 40px"/><div style="display:flex;flex-direction:column"><div style="font-weight:700">${r.name}</div>${descHtml}</div></div>`;
+            m.bindPopup(popupText);
+            m.on('click', ()=>{ m.openPopup(); map.setView(p, BASE_TILE_Z); });
+            group.addLayer(m);
+        });
+        currentResourceGroups[r.id] = {group, checkbox:cb, first:firstPointLatLng};
+        cb.addEventListener('change', ()=>{ if(cb.checked) map.addLayer(group); else map.removeLayer(group); });
+    });
+}
+
+async function loadDataset(name){
+    try{
+        currentDatasetName = name;
+        clearResourceLayers();
+        const listEl = document.getElementById('resourceList');
+        if(listEl) listEl.innerHTML = '';
+        const tierTabsEl = document.getElementById('tierTabs');
+        if(tierTabsEl) tierTabsEl.style.display = (name === 'resources') ? 'flex' : 'none';
+        if(name === 'resources' && (!selectedTier || !/^T[1-5]$/i.test(selectedTier))) selectedTier = 'T1';
+        highlightTierButtons();
+
+        const res = await fetch(`data/${name}.json`);
+        const resources = await res.json();
+        currentResources = resources;
+
+        if(name === 'resources'){
+            renderResourcesList();
+        } else {
+            renderGroupedList(name);
+        }
+    }catch(err){}
+}
+
+document.querySelectorAll('.ds-btn').forEach(btn=> btn.addEventListener('click', ()=>{ document.querySelectorAll('.ds-btn').forEach(b=> b.style.background='transparent'); btn.style.background='#172025'; loadDataset(btn.dataset.ds); }));
+const defaultBtn = document.querySelector('.ds-btn[data-ds="resources"]'); if(defaultBtn) defaultBtn.style.background = '#172025';
+loadDataset('resources');
+
+document.querySelectorAll('.tier-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+        const t = (btn.dataset.tier || '').toUpperCase();
+        if(!/^T[1-4]$/.test(t)) return;
+        selectedTier = t;
+        highlightTierButtons();
+        if(currentDatasetName === 'resources'){
+            renderResourcesList();
+        }
+    });
+});
+
+function renderGroupedList(datasetName){
+    const listEl = document.getElementById('resourceList');
+    if(!listEl) return;
+    clearResourceLayers();
+    listEl.innerHTML = '';
+
+    const colorsByDS = {
+        npc: '#5aa9ff',
+        monsters: '#ff6b6b',
+        titles: '#c678ff'
+    };
+    const color = colorsByDS[datasetName] || '#7bd389';
+
+    const groups = {};
+    (currentResources||[]).forEach(r => {
+        const g = (r.group || 'Другое').trim();
+        (groups[g] = groups[g] || []).push(r);
+    });
+
+
+    const parseLinks = (s)=>{
+        if(typeof s !== 'string') return '';
+        return s.replace(/\[\[(.*?)\*(.*?)\]\]/g, (m, label, spec)=>{
+            const safeLabel = String(label||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+            const safeSpec = String(spec||'').replace(/"/g,'&quot;');
+            const isHttp = /^https?:/i.test(safeSpec);
+            if(isHttp){
+                return `<a href="${safeSpec}" target="_blank" rel="noopener noreferrer" class="desc-link" data-spec="${safeSpec}">${safeLabel}</a>`;
+            }
+            return `<a href="#" class="desc-link" data-spec="${safeSpec}">${safeLabel}</a>`;
+        });
+    };
+
+    Object.keys(groups).sort().forEach(groupName => {
+        const details = document.createElement('details');
+        details.className = 'resource-item';
+        details.open = false;
+        const summary = document.createElement('summary');
+        const groupCheckbox = document.createElement('input');
+        groupCheckbox.type = 'checkbox';
+        groupCheckbox.id = `group_${datasetName}_${groupName.replace(/\s+/g, '_')}`;
+        groupCheckbox.style.marginLeft = '8px';
+        groupCheckbox.style.marginRight = '8px';
+        const groupLabel = document.createElement('span');
+        groupLabel.textContent = groupName;
+        summary.appendChild(groupLabel);
+        summary.appendChild(groupCheckbox);
+        details.appendChild(summary);
+        const inner = document.createElement('div');
+        inner.className = 'group-inner';
+        details.appendChild(inner);
+        groups[groupName].forEach(r => {
+            const row = document.createElement('div');
+            row.className = 'details-row';
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.id = datasetName + '_' + r.id;
+            const img = document.createElement('img');
+            img.src = r.icon || '';
+            const label = document.createElement('label');
+            label.htmlFor = cb.id;
+            label.style.display = 'flex';
+            label.style.flexDirection = 'column';
+            label.innerHTML = `<strong>${r.name || r.id}</strong>` +
+                ((r.desc1||r.desc2) ? `<span style="color:#9aa0a6;font-weight:400">${parseLinks(r.desc1||'')}${r.desc2?('<br>'+parseLinks(r.desc2)):''}</span>` : '');
+            const centerBtn = document.createElement('button');
+            centerBtn.className = 'center-btn';
+            centerBtn.title = 'Центрировать';
+            centerBtn.textContent = '⦿';
+
+            const groupLayer = L.layerGroup();
+            let firstPointLatLng = null;
+            (r.coords||[]).forEach(c => {
+                const rawX = Number(c.x || 0);
+                const rawY = Number(c.y ?? c.z ?? 0);
+                const {imageX, imageY} = toImageXYFromGame(rawX, rawY);
+                const p = [MAP_HEIGHT - imageY, imageX];
+                if(!firstPointLatLng) firstPointLatLng = p;
+                const m = L.circleMarker(p, {radius:8, color:color, fillColor:color, fillOpacity:0.9, stroke:true, weight:2, opacity:1});
+                const popupText = `<div style="display:flex;align-items:center;gap:8px;min-width:220px"><img src="${(r.icon||'').replace(/"/g,'&quot;')}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;flex:0 0 40px"/><div style="display:flex;flex-direction:column"><div style=\"font-weight:700\">${r.name||r.id}</div>${(r.desc1||'')?`<div style=\"color:#9aa0a6\">${parseLinks(r.desc1)}</div>`:''}${(r.desc2||'')?`<div style=\"color:#9aa0a6\">${parseLinks(r.desc2)}</div>`:''}</div></div>`;
+                m.bindPopup(popupText);
+                m.on('click', ()=>{ m.openPopup(); });
+                groupLayer.addLayer(m);
+            });
+
+                currentResourceGroups[r.id] = {group: groupLayer, checkbox: cb, first: firstPointLatLng};
+
+            cb.addEventListener('change', ()=>{
+                if(cb.checked) map.addLayer(groupLayer); else map.removeLayer(groupLayer);
+            });
+            centerBtn.addEventListener('click', ()=>{
+                if(firstPointLatLng){ 
+                    const currentZoom = map.getZoom();
+                    const targetZoom = Math.max(currentZoom + 1, BASE_TILE_Z + 2);
+                    map.setView(firstPointLatLng, targetZoom); 
+                }
+            });
+
+            row.appendChild(cb);
+            row.appendChild(img);
+            row.appendChild(label);
+            row.appendChild(centerBtn);
+            inner.appendChild(row);
+        });
+
+        groupCheckbox.addEventListener('change', function(e) {
+            e.stopPropagation();
+            const isChecked = this.checked;
+
+            const groupCheckboxes = inner.querySelectorAll('input[type="checkbox"]');
+            groupCheckboxes.forEach(checkbox => {
+                if (checkbox.checked !== isChecked) {
+                    checkbox.checked = isChecked;
+                    checkbox.dispatchEvent(new Event('change'));
+                }
+            });
+        });
+
+        groupCheckbox.addEventListener('click', function(e) {
+            e.stopPropagation();
+        });
+
+        listEl.appendChild(details);
+    });
+}
+
+document.addEventListener('click', function(e){
+    const a = e.target && (e.target.closest ? e.target.closest('a.desc-link') : null);
+    if(!a) return;
+    e.preventDefault();
+    const spec = a.getAttribute('data-spec');
+    if(!spec) return;
+    navigateToSpec(spec);
+});
+
+(function(){ const mapContainer = document.getElementById('map'); const tip = document.createElement('div'); tip.id = 'map-tooltip'; tip.innerText=''; mapContainer.appendChild(tip); function showTooltip(html, localX, localY){ tip.innerHTML = html; tip.style.visibility='visible'; const rect = mapContainer.getBoundingClientRect(); const tipW = tip.offsetWidth || 120; const tipH = tip.offsetHeight || 28; let left = localX + 12; let top = localY + 12; if(left + tipW > rect.width) left = Math.max(4, localX - 12 - tipW); if(top + tipH > rect.height) top = Math.max(4, localY - 12 - tipH); tip.style.left = left + 'px'; tip.style.top = top + 'px'; }
+function hideTooltip(){ tip.style.visibility='hidden'; }
+mapContainer.addEventListener('mousemove', function(ev){ const rect = mapContainer.getBoundingClientRect(); const localX = ev.clientX - rect.left; const localY = ev.clientY - rect.top; const pt = L.point(localX, localY); const latlng = map.containerPointToLatLng(pt); const lat = latlng.lat; const lng = latlng.lng; const imageX = Math.round(lng); const distFromBottomPixels = lat; const imageY = Math.round(MAP_HEIGHT - distFromBottomPixels); const gameUnitX = Math.round((imageX - CAL_BX) / CAL_AX); const gameUnitY = Math.round((imageY - CAL_BY) / CAL_AY); showTooltip(`${gameUnitX} ${gameUnitY}`, Math.round(localX), Math.round(localY)); }); mapContainer.addEventListener('mouseleave', hideTooltip); map.on('zoomstart dragstart', hideTooltip); })();
+
+document.getElementById('reset').addEventListener('click', function(){
+    Object.values(currentResourceGroups).forEach(rg => {
+        if(rg.checkbox && rg.checkbox.checked){
+            rg.checkbox.checked = false;
+            rg.checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+    const searchInput = document.getElementById('search');
+    if(searchInput) searchInput.value = '';
+});
+
+document.getElementById('mapToggle').addEventListener('click', function(){
+    currentMapType = currentMapType === 'default' ? 'alternative' : 'default';
+    
+    const button = this;
+    const config = MAP_CONFIGS[currentMapType];
+    button.title = `Текущая: ${config.name}. Нажмите для переключения`;
+    
+    if (currentMapType === 'alternative') {
+        button.classList.add('alternative');
+    } else {
+        button.classList.remove('alternative');
+    }
+    
+    map.eachLayer(function(layer) {
+        if (layer instanceof CustomLayer) {
+            layer.redraw();
+        }
+    });
+    
+
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleButton = document.getElementById('mapToggle');
+    if (toggleButton) {
+        const config = MAP_CONFIGS[currentMapType];
+        toggleButton.title = `Текущая: ${config.name}. Нажмите для переключения`;
+    }
+});
+</script>
+</body>
+</html>
