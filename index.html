@@ -553,9 +553,57 @@ document.addEventListener('click', function(e){
     navigateToSpec(spec);
 });
 
-(function(){ const mapContainer = document.getElementById('map'); const tip = document.createElement('div'); tip.id = 'map-tooltip'; tip.innerText=''; mapContainer.appendChild(tip); function showTooltip(html, localX, localY){ tip.innerHTML = html; tip.style.visibility='visible'; const rect = mapContainer.getBoundingClientRect(); const tipW = tip.offsetWidth || 120; const tipH = tip.offsetHeight || 28; let left = localX + 12; let top = localY + 12; if(left + tipW > rect.width) left = Math.max(4, localX - 12 - tipW); if(top + tipH > rect.height) top = Math.max(4, localY - 12 - tipH); tip.style.left = left + 'px'; tip.style.top = top + 'px'; }
-function hideTooltip(){ tip.style.visibility='hidden'; }
-mapContainer.addEventListener('mousemove', function(ev){ const rect = mapContainer.getBoundingClientRect(); const localX = ev.clientX - rect.left; const localY = ev.clientY - rect.top; const pt = L.point(localX, localY); const latlng = map.containerPointToLatLng(pt); const lat = latlng.lat; const lng = latlng.lng; const imageX = Math.round(lng); const distFromBottomPixels = lat; const imageY = Math.round(MAP_HEIGHT - distFromBottomPixels); const gameUnitX = Math.round((imageX - CAL_BX) / CAL_AX); const gameUnitY = Math.round((imageY - CAL_BY) / CAL_AY); showTooltip(`${gameUnitX} ${gameUnitY}`, Math.round(localX), Math.round(localY)); }); mapContainer.addEventListener('mouseleave', hideTooltip); map.on('zoomstart dragstart', hideTooltip); })();
+(function(){ 
+    const mapContainer = document.getElementById('map'); 
+    const tip = document.createElement('div'); 
+    tip.id = 'map-tooltip'; 
+    tip.innerText=''; 
+    mapContainer.appendChild(tip); 
+    
+    function showTooltip(html, localX, localY){ 
+        tip.innerHTML = html; 
+        tip.style.visibility='visible'; 
+        const rect = mapContainer.getBoundingClientRect(); 
+        const tipW = tip.offsetWidth || 120; 
+        const tipH = tip.offsetHeight || 28; 
+        let left = localX + 12; 
+        let top = localY + 12; 
+        if(left + tipW > rect.width) left = Math.max(4, localX - 12 - tipW); 
+        if(top + tipH > rect.height) top = Math.max(4, localY - 12 - tipH); 
+        tip.style.left = left + 'px'; 
+        tip.style.top = top + 'px'; 
+    }
+    
+    function hideTooltip(){ 
+        tip.style.visibility='hidden'; 
+    }
+    
+    mapContainer.addEventListener('mousemove', function(ev){ 
+        // Проверяем, находится ли мышка над контейнером с координатами
+        const coordContainer = document.getElementById('coord-inputs-container');
+        if(coordContainer && coordContainer.contains(ev.target)) {
+            hideTooltip();
+            return;
+        }
+        
+        const rect = mapContainer.getBoundingClientRect(); 
+        const localX = ev.clientX - rect.left; 
+        const localY = ev.clientY - rect.top; 
+        const pt = L.point(localX, localY); 
+        const latlng = map.containerPointToLatLng(pt); 
+        const lat = latlng.lat; 
+        const lng = latlng.lng; 
+        const imageX = Math.round(lng); 
+        const distFromBottomPixels = lat; 
+        const imageY = Math.round(MAP_HEIGHT - distFromBottomPixels); 
+        const gameUnitX = Math.round((imageX - CAL_BX) / CAL_AX); 
+        const gameUnitY = Math.round((imageY - CAL_BY) / CAL_AY); 
+        showTooltip(`${gameUnitX} ${gameUnitY}`, Math.round(localX), Math.round(localY)); 
+    }); 
+    
+    mapContainer.addEventListener('mouseleave', hideTooltip); 
+    map.on('zoomstart dragstart', hideTooltip); 
+})();
 
 document.getElementById('reset').addEventListener('click', function(){
     Object.values(currentResourceGroups).forEach(rg => {
@@ -597,6 +645,242 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleButton.title = `Текущая: ${config.name}. Нажмите для переключения`;
     }
 });
+
+// Координатные линии
+(function(){
+    const mapContainer = document.getElementById('map');
+    const coordContainer = document.createElement('div');
+    coordContainer.id = 'coord-inputs-container';
+    coordContainer.style.cssText = `
+        position: absolute;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 500;
+        display: flex;
+        gap: 12px;
+        background: rgba(13, 15, 17, 0.9);
+        padding: 12px 16px;
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.08);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        font-family: Inter, Segoe UI, Arial, sans-serif;
+    `;
+
+    const input1 = document.createElement('input');
+    input1.type = 'text';
+    input1.placeholder = 'X (например: 2*6)';
+    input1.id = 'coord-input-1';
+    input1.style.cssText = `
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.02);
+        color: #e8eef1;
+        font-size: 13px;
+        width: 160px;
+        outline: none;
+        transition: all 0.2s;
+    `;
+    input1.addEventListener('focus', function(){ this.style.borderColor = 'rgba(0,230,118,0.5)'; this.style.background = 'rgba(255,255,255,0.04)'; });
+    input1.addEventListener('blur', function(){ this.style.borderColor = 'rgba(255,255,255,0.08)'; this.style.background = 'rgba(255,255,255,0.02)'; });
+
+    const input2 = document.createElement('input');
+    input2.type = 'text';
+    input2.placeholder = 'Y (например: *26)';
+    input2.id = 'coord-input-2';
+    input2.style.cssText = `
+        padding: 8px 10px;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.02);
+        color: #e8eef1;
+        font-size: 13px;
+        width: 160px;
+        outline: none;
+        transition: all 0.2s;
+    `;
+    input2.addEventListener('focus', function(){ this.style.borderColor = 'rgba(90,169,255,0.5)'; this.style.background = 'rgba(255,255,255,0.04)'; });
+    input2.addEventListener('blur', function(){ this.style.borderColor = 'rgba(255,255,255,0.08)'; this.style.background = 'rgba(255,255,255,0.02)'; });
+
+    const clearBtn = document.createElement('button');
+    clearBtn.textContent = '✕';
+    clearBtn.title = 'Очистить';
+    clearBtn.style.cssText = `
+        width: 28px;
+        height: 28px;
+        padding: 0;
+        border-radius: 6px;
+        border: 1px solid rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.02);
+        color: #9aa0a6;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.2s;
+    `;
+    clearBtn.addEventListener('mouseover', function(){ this.style.background = 'rgba(255,255,255,0.05)'; this.style.color = '#cfe7d6'; });
+    clearBtn.addEventListener('mouseout', function(){ this.style.background = 'rgba(255,255,255,0.02)'; this.style.color = '#9aa0a6'; });
+    clearBtn.addEventListener('click', function(){
+        input1.value = '';
+        input2.value = '';
+        updateCoordinateLines();
+    });
+
+    coordContainer.appendChild(input1);
+    coordContainer.appendChild(input2);
+    coordContainer.appendChild(clearBtn);
+    mapContainer.appendChild(coordContainer);
+
+    coordContainer.style.pointerEvents = 'auto';
+    input1.style.pointerEvents = 'auto';
+    input2.style.pointerEvents = 'auto';
+    clearBtn.style.pointerEvents = 'auto';
+
+    let coordinateLineGroup = null;
+
+    function initCoordinateLines(){
+        if(!coordinateLineGroup && map){
+            coordinateLineGroup = L.layerGroup().addTo(map);
+        }
+    }
+
+    if(map && map.getCenter){
+        setTimeout(initCoordinateLines, 100);
+    }
+    map.on('load', initCoordinateLines);
+    setTimeout(initCoordinateLines, 500);
+
+    input1.addEventListener('input', updateCoordinateLines);
+    input2.addEventListener('input', updateCoordinateLines);
+
+    function expandWildcard(str, maxDigit = 5){
+        if(!str || typeof str !== 'string') return [];
+        str = str.trim();
+        if(!str.includes('*')){
+            const num = Number(str);
+            if(!isNaN(num)) return [num];
+            return [];
+        }
+        const starCount = (str.match(/\*/g) || []).length;
+        if(starCount === 1){
+            const expanded = [];
+            for(let i = 1; i <= maxDigit; i++){
+                const val = str.replace('*', i);
+                const num = Number(val);
+                if(!isNaN(num)) expanded.push(num);
+            }
+            return expanded;
+        }
+        if(starCount === 2){
+            const expanded = [];
+            for(let i = 1; i <= maxDigit; i++){
+                for(let j = 0; j <= 9; j++){
+                    let val = str.replace('*', i);
+                    val = val.replace('*', j);
+                    const num = Number(val);
+                    if(!isNaN(num)) expanded.push(num);
+                }
+            }
+            return expanded;
+        }
+        return [];
+    }
+
+    function parseCoordinates(str, isSecondField = false, maxValue = Infinity, maxDigit = 5){
+        if(!str || typeof str !== 'string') return null;
+        const parts = str.trim().split(/\s+/);
+        if(parts.length < 1) return null;
+        let xValues = [];
+        let yValues = [];
+        if(parts.length === 1){
+            const val = parts[0].trim();
+            if(isSecondField){
+                yValues = expandWildcard(val, maxDigit).filter(v => v <= maxValue);
+            } else {
+                xValues = expandWildcard(val, maxDigit).filter(v => v <= maxValue);
+            }
+        } else if(parts.length >= 2){
+            const x = parts[0].trim();
+            const y = parts[1].trim();
+            xValues = expandWildcard(x, maxDigit).filter(v => v <= maxValue);
+            yValues = expandWildcard(y, maxDigit).filter(v => v <= maxValue);
+        }
+        return {
+            xValues,
+            yValues,
+            hasX: xValues.length > 0,
+            hasY: yValues.length > 0
+        };
+    }
+
+    function updateCoordinateLines(){
+        if(!coordinateLineGroup){
+            return;
+        }
+        coordinateLineGroup.clearLayers();
+        const coords1 = parseCoordinates(input1.value, false, 800, 8);
+        const coords2 = parseCoordinates(input2.value, true, 1100, 11);
+        const linesToDraw = [];
+        if(coords1){
+            if(coords1.hasX){
+                coords1.xValues.forEach(x => {
+                    linesToDraw.push({type: 'vertical', value: x, color: '#0fff27', width: 3});
+                });
+            }
+            if(coords1.hasY){
+                coords1.yValues.forEach(y => {
+                    linesToDraw.push({type: 'horizontal', value: y, color: '#0fff27', width: 3});
+                });
+            }
+        }
+        if(coords2){
+            if(coords2.hasX){
+                coords2.xValues.forEach(x => {
+                    linesToDraw.push({type: 'vertical', value: x, color: '#2e92ff', width: 3});
+                });
+            }
+            if(coords2.hasY){
+                coords2.yValues.forEach(y => {
+                    linesToDraw.push({type: 'horizontal', value: y, color: '#2e92ff', width: 3});
+                });
+            }
+        }
+        linesToDraw.forEach(line => {
+            try {
+                if(line.type === 'vertical'){
+                    const imageX = CAL_AX * line.value + CAL_BX;
+                    const clampedX = Math.max(0, Math.min(MAP_WIDTH, imageX));
+                    const latlng1 = [MAP_HEIGHT, clampedX];
+                    const latlng2 = [0, clampedX];
+                    const polyline = L.polyline([latlng1, latlng2], {
+                        color: line.color,
+                        weight: line.width,
+                        opacity: 0.7,
+                        interactive: false,
+                        dashArray: '5,5'
+                    });
+                    coordinateLineGroup.addLayer(polyline);
+                } else if(line.type === 'horizontal'){
+                    const imageY = CAL_AY * line.value + CAL_BY;
+                    const clampedLat = Math.max(0, Math.min(MAP_HEIGHT, MAP_HEIGHT - imageY));
+                    const latlng1 = [clampedLat, 0];
+                    const latlng2 = [clampedLat, MAP_WIDTH];
+                    const polyline = L.polyline([latlng1, latlng2], {
+                        color: line.color,
+                        weight: line.width,
+                        opacity: 0.7,
+                        interactive: false,
+                        dashArray: '5,5'
+                    });
+                    coordinateLineGroup.addLayer(polyline);
+                }
+            } catch(e) {}
+        });
+    }
+
+    input1.addEventListener('keydown', function(e){ if(e.key === 'Enter') input2.focus(); });
+    input2.addEventListener('keydown', function(e){ if(e.key === 'Enter') input2.blur(); });
+})();
 </script>
 </body>
 </html>
